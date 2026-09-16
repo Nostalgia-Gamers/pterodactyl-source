@@ -9,8 +9,8 @@ RUN dpkg --add-architecture i386 \
  && curl -sSL https://github.com/gorcon/rcon-cli/releases/download/v0.10.3/rcon-0.10.3-amd64_linux.tar.gz | tar xz \
  && mv rcon-0.10.3-amd64_linux/rcon /usr/local/bin/rcon
 
-# Extract real libmysqlclient.so.21 (i386) from Ubuntu 23.10 where it exists
-FROM ubuntu:mantic AS mysql-donor
+# Extract real libmysqlclient.so.21 (i386) from Ubuntu 24.04 LTS (Debian ships no i386 build)
+FROM ubuntu:noble AS mysql-donor
 
 RUN dpkg --add-architecture i386 \
  && apt-get update \
