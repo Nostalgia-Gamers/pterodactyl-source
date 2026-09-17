@@ -9,13 +9,6 @@ RUN dpkg --add-architecture i386 \
  && curl -sSL https://github.com/gorcon/rcon-cli/releases/download/v0.10.3/rcon-0.10.3-amd64_linux.tar.gz | tar xz \
  && mv rcon-0.10.3-amd64_linux/rcon /usr/local/bin/rcon
 
-# Extract real libmysqlclient.so.21 (i386) from Ubuntu 24.04 LTS (Debian ships no i386 build)
-FROM ubuntu:noble AS mysql-donor
-
-RUN dpkg --add-architecture i386 \
- && apt-get update \
- && apt-get install -y --no-install-recommends libmysqlclient21:i386
-
 # ------- Final image -------
 FROM debian:trixie-slim
 
@@ -44,6 +37,10 @@ RUN dpkg --add-architecture i386 \
     libncurses6:i386 \
     libgoogle-perftools4t64:i386 \
     # Database libs (required by AMXX/Metamod plugins)
+    # MariaDB's client is plain C. MySQL 8's libmysqlclient needs GCC 13's
+    # libstdc++, and hlds_run puts HLDS's bundled old libstdc++ first on
+    # LD_LIBRARY_PATH, so it fails to dlopen inside the game server.
+    libmariadb3:i386 \
     libpq5:i386 \
     # 64-bit libs
     libstdc++6 \
@@ -54,12 +51,12 @@ RUN dpkg --add-architecture i386 \
     gettext-base \
  && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
  && locale-gen \
+ && ln -s /usr/lib/i386-linux-gnu/libmariadb.so.3 /usr/lib/i386-linux-gnu/libmysqlclient.so.21 \
  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* /var/log/* /tmp/* /usr/share/doc/* /usr/share/man/*
 
 COPY --from=builder /usr/local/bin/rcon /usr/local/bin/rcon
-COPY --from=mysql-donor /usr/lib/i386-linux-gnu/libmysqlclient.so.21* /usr/lib/i386-linux-gnu/
 COPY ./entrypoint.sh /entrypoint.sh
 
 USER        container
